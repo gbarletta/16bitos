@@ -1,0 +1,2 @@
+floppya: 1_44=16bitos.flp, status=inserted
+boot: a

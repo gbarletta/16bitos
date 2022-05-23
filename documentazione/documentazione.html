@@ -1,0 +1,83 @@
+<html>
+	<head>
+		<title>
+			16bitOS
+		</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	</head>
+	<body>
+		<center><h1>16bitOS</h1></center><br /><br />
+		<center><img src="screen.png" width="600px" height="300px" /></center><br /><br />
+		<span>
+			16bitOS è un piccolo sistema operativo a 16 bit (in modalità reale) per computer dotati di CPU x86. E' dotato di una semplice interfaccia a linea di comando e di alcuni programmi per la shell.
+			<br />
+			<br />
+			<b>Perchè?</b><br />
+			Volevo studiare il vero funzionamento di una macchina, quindi ho sviluppato questo piccolo sistema per mettere alla prova le mie conoscenze.
+			<br />
+			<br />
+			<b>Come?</b><br />
+			Ho sviluppato questo sistema interamente in assembly 8086 a 16 bit, compilando i sorgenti utilizzando NASM su un sistema Linux.
+		</span>
+		<br /><br /><center><h1>Introduzione</h1></center><br /><br />
+		<span>
+			16bitOS è un kernel sviluppato interamente in Assembly a 16 bit. Questo significa che la macchina lavorerà in real mode (modalità reale). 
+			In modalità reale un computer è in grado di utilizzare gli interrupt del BIOS, ossia delle funzioni messe a disposizione per gestire 
+			varie componenti della macchina, come ad esempio un lettore floppy o la scheda grafica.<br /><br />
+			Attraverso queste routine, si è in grado di adattare il software in rapporto con l'hardware. Ad esempio, possiamo utilizzare 
+			un certo interrupt che ci permette di mettere a schermo un carattere.<br /><br />
+			Ci sono comunque dei limiti nella modalità reale, infatti il massimo della memoria che può essere indirizzata è di 1MB, lasciando il
+			resto della memoria inutilizzabile.
+		</span>
+		<br /><br /><center><h1>Struttura del sistema</h1></h1></center><br /><br />
+		<span>
+			Il sistema operativo è composto da:<br /><br />
+			<li>un bootloader (<b>boot.bin</b>, [bootloader/BootMain.asm])</li> 
+			<li>un kernel (<b>kern.bin</b>, [kernel/KernelMain.asm])</li> 
+			<li>un file scanner (<b>scan.bin</b>, [scanner.asm])</li>
+			<li>una shell (<b>shel.bin</b>, [shell.asm])</li>
+			<li>un comando help (<b>help</b>, [help.asm])</li>
+			<li>un comando halt (<b>halt</b>, [halt.asm])</li>
+			<li>un comando list (<b>list</b>, [list.asm])</li>
+			<br />
+			Inoltre è composto da alcune funzioni che possono essere incluse nei file principali:
+			<br /><br />
+			<li>get_string (kernel/io/get_string.asm)</li> 
+			<li>PrintHex (kernel/io/print_hex_byte.asm)</li>
+			<li>PrintNewLine (kernel/io/print_newline.asm)</li>
+			<li>PrintString (kernel/io/print_string.asm)</li>
+			<li>strcmp (kernel/string/strcmp.asm)</li>
+			<li>strlen (kernel/string/strlen.asm)</li>
+			<br />
+			
+			Il tutto viene compilato in file binario di tipo <b>raw</b>, ossia senza header, senza referenze e senza links ad oggetti. E' un
+			tipo di file binario puro, ossia composto solo da istruzioni x86.<br /><br />
+			Tutti i file compilati successivamente verranno scritti in un immagine floppy nei vari settori del floppy stesso, utilizzando il programma floppy_writer. 
+			Nel settore 3 è presente la struttura del filesystem, composta da nome del file (9 bytes) e dal numero del settore in cui esso si 
+			trova (1 byte). All'inizio di questa struttura, c'è un intero che rappresenta il numero di files presenti nel filesystem (2 bytes).
+			Con questo filesystem si possono rappresentare massimo 51 files, che occuperebbero 510 bytes della struttura filesystem su 512.
+			I restanti 2 bytes sono quelli utilizzati per memorizzare il numero di files presenti.
+		</span>
+		<br /><br /><center><h1>Processo di esecuzione del sistema operativo</h1></h1></center><br /><br />
+		<span>
+			Una volta acceso il computer, e dopo aver impostato il boot da floppy, il BIOS prende il primo settore del floppy e lo carica all'indirizzo <b>0x7C00:0x0000</b>.
+			Di conseguenza il programma che si trova nel primo settore del floppy è il bootloader, <b>boot.bin</b>. Questo programma si occupa di leggere dal floppy il kernel e di caricarlo in memoria all'indirizzo <b>0x2000:0x0000</b>. Quindi fa una jump a questo indirizzo, 
+			ossia lo manda in esecuzione.<br /><br />
+			Mandato in esecuzione <b>kern.bin</b>, il kernel si occupa di caricare in memoria la struttura del filesystem all'indirizzo di memoria <b>0x8000:0x0000</b>. Successivamente,
+			carica il file scanner all'indirizzo <b>0x8000:0x0400</b> e la shell all'indirizzo <b>0x8000:0x0200</b>.<br /><br />
+			Dopo aver caricato tutto il necessario manda in esecuzione la shell con una jump. La shell si mostra come una piccola interfaccia utente a linea di comando.
+			Il funzionamento è molto semplice: permette di ricevere in input una stringa. Per eseguire un programma basterà immettere il nome del programma. Se vogliamo per esempio vedere che files sono presenti nel filesystem ci basta digitare "<b>list</b>".
+			Dopo aver immesso la stringa, e dopo aver premuto ENTER, la shell manda in esecuzione il file scanner che si occupa di analizzare il filesystem per trovare il file corrispondente. Se lo trova, prende il numero del settore nel quale si trova e lo manda in esecuzione. 
+			Altrimenti imposta il registro AX a 0x1234 per fare in modo che ritornando alla shell venga messo a schermo un messaggio di errore ("<b>Command not found</b>").
+			NB: si può utilizzare boot.bin per rieseguire il processo di boot, ma si raccomandata di non mandare in esecuzione nuovamente il kernel o il filescanner, in quanto entrerebbero in un ciclo di lettura floppy che manderebbe in crash il computer.
+			
+		</span>
+		<br /><br /><center><h1>Links utili</h1></h1></center><br /><br />
+		<span>
+			<b><a href="http://www.nasm.us/">NASM - the netwide assembler</a></b><br /><br />
+			<b><a href="http://www.qemu.org/">QEMU - a generic and open source machine emulator and virtualizer</a></b><br /><br />
+		</span>
+		
+		<br /><br /><a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License</a>.
+	</body>
+</html>
